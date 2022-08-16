@@ -46,40 +46,58 @@ export default async function(context, req) {
         const processed = await Promise.allSettled(
             freightlinedetails.map(async ({ ref: packNum }) => {
 
-                let baseArgs = [ tzSiteID, packNum ], updated = { packNum };
-
-                if(await Consignment.checkPackingIDExists(...baseArgs)){
-
-                    updated.updateTrackingPerTransferIDRequired = true;
-
-                    // Run update
-                    await Consignment.updateTrackingPerTransferID(...baseArgs, trackingid);
-
-                    updated.updateTrackingPerTransferID = 'done'
+                try {
                     
+                    let baseArgs = [ tzSiteID, packNum ], updated = { packNum };
+                    const packIDExists = await Consignment.checkPackingIDExists(...baseArgs);
+                    log(`PackIDExists: ${packIDExists}`);
+
+                    if(packIDExists){
+
+                        updated.updateTrackingPerTransferIDRequired = true;
+
+                        // Run update
+                        await Consignment.updateTrackingPerTransferID(...baseArgs, trackingid);
+
+                        updated.updateTrackingPerTransferID = 'done'
+                        
+                    }
+
+                    const transferIDExists = await Consignment.checkTransferIDExists(...baseArgs);
+                    log(`TransferIDExists: ${packIDExists}`);
+
+                    if(transferIDExists){
+
+                        updated.updateTrackingPerPackingIDRequired = true;
+
+                        // Run update
+                        await Consignment.updateTrackingPerPackingID(...baseArgs, trackingid);                    
+
+                        updated.updateTrackingPerPackingID = 'done' 
+
+                    }
+
+                    return updated
+
+                } catch (e) {
+                    log(e.message)
+                    throw new Error(`PackingNumber ${packNum}. Error: ${e.message}`)
                 }
 
-                if(await Consignment.checkTransferIDExists(...baseArgs)){
-
-                    updated.updateTrackingPerPackingIDRequired = true;
-
-                    // Run update
-                    await Consignment.updateTrackingPerPackingID(...baseArgs, trackingid);                    
-
-                    updated.updateTrackingPerPackingID = 'done' 
-
-                }
-
-                return updated
 
             })
         );
+
+        const failedTrackingIDUpdates =  processed.filter(response => response.status === 'rejected');
+        const failedCount = failedTrackingIDUpdates.length;
+        if(failedCount) log(`Failures: ${failedCount}. Failed PackNums: ${failedTrackingIDUpdates.map(response => response.reason)}`);
         
         responseBody.data = {
             company: tzSiteID,
             consignmentNumber,
             trackingNumber: trackingid,
-            processed: processed.map(resp =>  resp.value)
+            processed: processed.map(resp =>  resp.value),
+            ...(failedCount ? { failed: failedTrackingIDUpdates } : {})
         }
 
     } catch (e) {
