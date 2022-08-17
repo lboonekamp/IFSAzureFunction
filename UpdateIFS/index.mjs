@@ -1,21 +1,20 @@
 import IFSConsignment from './components/Sql.Database.Component.mjs';
 
 export default async function(context, req) {
- 
+
     const log = message => context.log(message);
+
+    log(77, req.headers)
+    
+    log(`Server: ${process.env.server}. Database: ${process.env.database}.`);
 
     // Reference Doc:
     // - https://docs.microsoft.com/en-us/azure/azure-functions/functions-reference-node?tabs=v2-v3-v4-export%2Cv2-v3-v4-done%2Cv2%2Cv2-log-custom-telemetry%2Cv2-accessing-request-and-response%2Cwindows-setting-the-node-version
-
-    log('IFS WebService.Consignment.UpdateTrackingID received a request...');
-
     let responseBody = {}, statCode;
 
     try { 
 
         let { bureauid: siteID, connotenumber: consignmentNumber, creatorid, trackingid, freightlinedetails } = req.body;
-        
-        let Consignment = new IFSConsignment(req.body);
     
         // Only handle ones that have been 'Imported'
         if(creatorid === 'IMPORT_ERROR'){
@@ -37,18 +36,21 @@ export default async function(context, req) {
             statCode = 400;
             throw new Error(`Bad request. No ConsignmentNumber present.`)
         }
+        
+        let Consignment = new IFSConsignment(req.body);
 
-        log(`Beginning Import for Site: ${siteID}...`);
+        log(`IFS WebService.Consignment.UpdateTrackingID received a request for Site: ${siteID}...`);
         log(`Consignment ${consignmentNumber}. Total to process: ${freightlinedetails.length}`);
 
         const tzSiteID = ['P6O', 'K7X'].includes(siteID) ? 'TZNZ' : 'TZA';
 
-        const processed = await Promise.allSettled(
+        let processed = await Promise.allSettled(
             freightlinedetails.map(async ({ ref: packNum }) => {
 
                 try {
                     
                     let baseArgs = [ tzSiteID, packNum ], updated = { packNum };
+                    
                     const packIDExists = await Consignment.checkPackingIDExists(...baseArgs);
                     log(`PackIDExists: ${packIDExists}`);
 
@@ -88,15 +90,31 @@ export default async function(context, req) {
             })
         );
 
-        const failedTrackingIDUpdates =  processed.filter(response => response.status === 'rejected');
+        let failedTrackingIDUpdates =  processed.filter(response => response.status === 'rejected');
         const failedCount = failedTrackingIDUpdates.length;
-        if(failedCount) log(`Failures: ${failedCount}. Failed PackNums: ${failedTrackingIDUpdates.map(response => response.reason)}`);
+        let failedErrorString;
+        if(failedCount){
+
+            failedTrackingIDUpdates = failedTrackingIDUpdates.map(response => response.reason);
+
+            failedErrorString = failedTrackingIDUpdates.join("\r\n");
+
+            log(`Failures: ${failedCount}. Failed PackNums: ${failedErrorString}`)
+
+        }
+
+        processed = processed.filter(resp => resp.status === 'fulfilled' && resp?.value && typeof resp.value === 'object').map(resp =>  resp.value);
+        const successfulCount = processed.length;
+
+        log(`TotalFailed: ${failedCount}. TotalSuccessful: ${successfulCount}`);
+
+        if(failedCount === successfulCount) throw new Error(`All PackNums failed to be updated. Errors: ${failedErrorString}.`);
         
         responseBody.data = {
             company: tzSiteID,
             consignmentNumber,
             trackingNumber: trackingid,
-            processed: processed.map(resp =>  resp.value),
+            processed,
             ...(failedCount ? { failed: failedTrackingIDUpdates } : {})
         }
 

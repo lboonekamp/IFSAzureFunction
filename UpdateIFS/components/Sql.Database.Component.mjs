@@ -12,7 +12,7 @@ export default class IFSConsignment{
     async newQuery(paramObj){
 
         if(!this.pool){
-            
+
             const { server, database, user, password } = process.env;
 
             this.pool = await SQL.connect({
@@ -21,12 +21,13 @@ export default class IFSConsignment{
                 server,
                 database,
                 options: {
-                    trustedConnection: true,
-                    encrypt: true,
-                    enableArithAbort: true, 
                     trustServerCertificate: true
                 }
             });
+
+            // let test = await SQL.connect(process.env.databaseConnectionString);
+            // console.log(29, test )
+
         }
 
         let sqlTr = await this.pool.request();
