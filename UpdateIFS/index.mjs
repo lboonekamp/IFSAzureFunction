@@ -6,8 +6,6 @@ export default async function(context, req) {
 
     log(req.headers)
 
-    log(req.body)
-
     // Reference Doc:
     // - https://docs.microsoft.com/en-us/azure/azure-functions/functions-reference-node?tabs=v2-v3-v4-export%2Cv2-v3-v4-done%2Cv2%2Cv2-log-custom-telemetry%2Cv2-accessing-request-and-response%2Cwindows-setting-the-node-version
     let responseBody = {}, statCode;
