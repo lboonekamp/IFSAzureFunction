@@ -4,9 +4,9 @@ export default async function(context, req) {
 
     const log = message => context.log(message);
 
-    log(77, req.headers)
-    
-    log(`Server: ${process.env.server}. Database: ${process.env.database}.`);
+    log(req.headers)
+
+    log(req.body)
 
     // Reference Doc:
     // - https://docs.microsoft.com/en-us/azure/azure-functions/functions-reference-node?tabs=v2-v3-v4-export%2Cv2-v3-v4-done%2Cv2%2Cv2-log-custom-telemetry%2Cv2-accessing-request-and-response%2Cwindows-setting-the-node-version
@@ -14,7 +14,7 @@ export default async function(context, req) {
 
     try { 
 
-        let { bureauid: siteID, connotenumber: consignmentNumber, creatorid, trackingid, freightlinedetails } = req.body;
+        let { bureauid: siteID, connotenumber: consignmentNumber, creatorid, labels, freightlinedetails } = req.body;
     
         // Only handle ones that have been 'Imported'
         if(creatorid === 'IMPORT_ERROR'){
@@ -22,9 +22,9 @@ export default async function(context, req) {
             throw new Error(`Invalid CreatorID. Expecting a value not equal to 'IMPORT_ERROR', received; ${creatorid}.`)
         }
     
-        if(!trackingid){
+        if(!labels?.length || !labels.every(l => l.labelno_tracking)){
             statCode = 400;
-            throw new Error(`Invalid TrackingID received. Expecting a string, received ${typeof trackingid}.`)
+            throw new Error(`Invalid array of TrackingIDs received. Expecting a array of strings, received one or more invalid values.`)
         }
 
         if(!freightlinedetails.length){
@@ -45,11 +45,23 @@ export default async function(context, req) {
         const tzSiteID = ['P6O', 'K7X'].includes(siteID) ? 'TZNZ' : 'TZA';
 
         let processed = await Promise.allSettled(
-            freightlinedetails.map(async ({ ref: packNum }) => {
+            freightlinedetails.map(async ({ ref: packNum }, index) => {
 
                 try {
-                    
-                    let baseArgs = [ tzSiteID, packNum ], updated = { packNum };
+
+                    let thisTrackingLabel = labels[index];
+                    if(!thisTrackingLabel){
+                        throw new Error(`No TrackingID found for PackNum: ${packNum}. Tried to find index ${index} in Labels array of length ${labels.length}.`)
+                    }
+
+                    const { labelno_tracking: trackingNumber } = thisTrackingLabel;
+
+                    let baseArgs = [ tzSiteID, packNum ];
+
+                    let updated = { 
+                        packNum,
+                        trackingNumber
+                    };
                     
                     const packIDExists = await Consignment.checkPackingIDExists(...baseArgs);
                     log(`PackIDExists: ${packIDExists}`);
@@ -59,7 +71,7 @@ export default async function(context, req) {
                         updated.updateTrackingPerTransferIDRequired = true;
 
                         // Run update
-                        await Consignment.updateTrackingPerTransferID(...baseArgs, trackingid);
+                        await Consignment.updateTrackingPerTransferID(...baseArgs, trackingNumber);
 
                         updated.updateTrackingPerTransferID = 'done'
                         
@@ -73,7 +85,7 @@ export default async function(context, req) {
                         updated.updateTrackingPerPackingIDRequired = true;
 
                         // Run update
-                        await Consignment.updateTrackingPerPackingID(...baseArgs, trackingid);                    
+                        await Consignment.updateTrackingPerPackingID(...baseArgs, trackingNumber);                    
 
                         updated.updateTrackingPerPackingID = 'done' 
 
@@ -113,7 +125,6 @@ export default async function(context, req) {
         responseBody.data = {
             company: tzSiteID,
             consignmentNumber,
-            trackingNumber: trackingid,
             processed,
             ...(failedCount ? { failed: failedTrackingIDUpdates } : {})
         }
