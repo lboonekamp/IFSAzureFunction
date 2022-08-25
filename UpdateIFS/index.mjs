@@ -4,7 +4,9 @@ export default async function(context, req) {
 
     const log = message => context.log(message);
 
-    log(req.headers)
+    log(req.headers);
+
+    log(req.body);
 
     // Reference Doc:
     // - https://docs.microsoft.com/en-us/azure/azure-functions/functions-reference-node?tabs=v2-v3-v4-export%2Cv2-v3-v4-done%2Cv2%2Cv2-log-custom-telemetry%2Cv2-accessing-request-and-response%2Cwindows-setting-the-node-version
@@ -40,19 +42,16 @@ export default async function(context, req) {
         log(`IFS WebService.Consignment.UpdateTrackingID received a request for Site: ${siteID}...`);
         log(`Consignment ${consignmentNumber}. Total to process: ${freightlinedetails.length}`);
 
+        const trackingDetail = labels.pop();
+
+        const { labelno_tracking: trackingNumber } = trackingDetail;
+
         const tzSiteID = ['P6O', 'K7X'].includes(siteID) ? 'TZNZ' : 'TZA';
 
         let processed = await Promise.allSettled(
             freightlinedetails.map(async ({ ref: packNum }, index) => {
 
-                try {
-
-                    let thisTrackingLabel = labels[index];
-                    if(!thisTrackingLabel){
-                        throw new Error(`No TrackingID found for PackNum: ${packNum}. Tried to find index ${index} in Labels array of length ${labels.length}.`)
-                    }
-
-                    const { labelno_tracking: trackingNumber } = thisTrackingLabel;
+                try {                   
 
                     let baseArgs = [ tzSiteID, packNum ];
 
