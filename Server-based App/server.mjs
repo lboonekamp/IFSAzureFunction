@@ -1,10 +1,19 @@
 import * as express from "express";
+import http from 'http';
+import { readFile } from "fs/promises";
 import { updateIFSConsignment } from "./components/App.Pack";
+import * as config from './webapp-config.json';
 
-const server = express();
+const certificate = {
+    key:  await readFile('privatekey.pem'),
+    cert: await readFile('cert.pem')
+};
 
-server.use(express.json());
+const app = express();
 
-server.post('/api/UpdateIFS', updateIFSConsignment);
+app.use(express.json());
 
-server.listen(3000, () => console.log('Server listening on port 3000...'))
+app.post('/api/UpdateIFS', updateIFSConsignment);
+
+http.createServer(certificate, app)
+    .listen(443, config.hostname, () => console.log('Server listening listening...'))
