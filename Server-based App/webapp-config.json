@@ -1,4 +1,8 @@
 {
     "hostname": "ifs.temperzone.com",
-    "certificate": {}
+    "user": "API_Write",
+    "password": "j1)TIH7cZ&)V",
+    "server": "TZ-AKL-SQL1.temperzone.co.nz",
+    "serverIpAddress": "10.110.9.33",
+    "database": "TZCustom"
 }
