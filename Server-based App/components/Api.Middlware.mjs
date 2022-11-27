@@ -26,10 +26,10 @@ export function buildValidateFunctionKey(functionKey){
 
     return function (req, res, next){
 
-        const { [x-functions-key]: incomingKey } = req.headers;
+        const incomingKey = req.headers['x-functions-key'];
         
         if(incomingKey !== functionKey){
-            res.status(403).send({
+            return res.status(403).send({
                 Message: 'Forbidden'
             })
         }
