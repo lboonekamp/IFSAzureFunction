@@ -1,0 +1,1 @@
+start cmd /k cd C:\API\IFSAzureFunction\Server-based-App && npm run start:prod

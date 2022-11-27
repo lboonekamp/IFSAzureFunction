@@ -1,4 +1,5 @@
 import SQL from 'mssql';
+import config from '../webapp-config.json' assert { type: 'json' };
 
 export default class IFSConsignment{
     constructor(connote){
@@ -14,20 +15,18 @@ export default class IFSConsignment{
 
         if(!this.pool){
 
-            const { server, database, user, password } = process.env;
+            const { server, database, user, password } = config;
 
             this.pool = await SQL.connect({
+                server,
                 user,
                 password,
-                server,
                 database,
                 options: {
-                    trustServerCertificate: true
+                    trustServerCertificate: true,
+                    encrypt: false
                 }
-            });
-
-            // let test = await SQL.connect(process.env.databaseConnectionString);
-            // console.log(29, test )
+            })            
 
         }
 
