@@ -22,6 +22,25 @@ export function buildValidateClient() {
 
 }
 
+export function validateFunctionKey(functionKey){
+
+    return function (req, res, next){
+
+        const { [x-functions-key]: incomingKey } = req.headers;
+        
+        if(incomingKey !== functionKey){
+            res.status(403).send({
+                Message: 'Forbidden'
+            })
+        }
+
+        next()
+
+    }
+    
+
+}
+
 export function removeHeaders(req, res, next){
 
     res.removeHeader('X-Powered-By');

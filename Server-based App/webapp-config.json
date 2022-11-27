@@ -4,5 +4,8 @@
     "password": "j1)TIH7cZ&)V",
     "server": "TZ-AKL-SQL1.temperzone.co.nz",
     "serverIpAddress": "10.110.9.33",
-    "database": "TZCustom"
+    "database": "TZCustom",
+    "apiSecurity": {
+        "functionKey": "jcJlvMEqALU4XJAz669L0sQLjYLmz7w54TcqEdKfxisxAzFuECRLfw=="
+    }
 }
