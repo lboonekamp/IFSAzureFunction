@@ -22,7 +22,7 @@ export function buildValidateClient() {
 
 }
 
-export function validateFunctionKey(functionKey){
+export function buildValidateFunctionKey(functionKey){
 
     return function (req, res, next){
 
