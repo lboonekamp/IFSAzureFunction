@@ -14,7 +14,7 @@ app.use(helmet());
 app.use(express.json());
 app.use(removeHeaders);
 
-app.get('/', (req, res) => res.send({ message: 'ok' }));
+app.get('/api/GetStatus', (req, res) => res.send({ message: 'ok' }));
 
 app.post('/api/UpdateConsignment', validateClient, validateFunctionKey, updateIFSConsignment);
 
